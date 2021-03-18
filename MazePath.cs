@@ -3,170 +3,261 @@ using System.Collections.Generic;
 
 namespace Maze
 {
-public class MazePath
-{
-    public Direction direction {get; set; }
-    public bool active { get; set; }
-    public List<GridPoint> points;
-    public Random rand;
-
-    public MazePath(int startX, int startY, Direction dir)
+    public class MazePath
     {
-        points.Add(new GridPoint(startX, startY));
-        direction = dir;
-        rand = new Random();
-    }
+        public Direction direction {get; set; }
+        public bool active { get; set; }
+        public List<GridPoint> points;
+        public Random rand;
 
-    public MazePath Branch()
-    {
-        if (points.Count < 3)
+        public MazePath(int startX, int startY, Direction dir)
+        {
+            points.Add(new GridPoint(startX, startY));
+            direction = dir;
+            rand = new Random();
+        }
+
+        public MazePath Branch()
+        {
+            if (points.Count < 3)
+                return null;
+
+            var index = rand.Next(points.Count - 2) + 1;
+
+            var nx = points[index].x;
+            var ny = points[index].y;
+
+            while (nx % 2 == 1 || ny % 2 == 1)
+            {
+                index = rand.Next(points.Count - 2) + 1;
+                nx = points[index].x;
+                ny = points[index].y;
+            }
+
+            var dirNew = Direction.UP;
+            var gUp = new GridPoint(nx, ny - 1);
+            var gDown = new GridPoint(nx, ny + 1);
+            var gLeft = new GridPoint(nx - 1, ny);
+            var gRight = new GridPoint(nx + 1, ny);
+
+            // Path is vertical
+            if ( (gUp.Equals(points[index - 1]) && gDown.Equals(points[index + 1])) ||
+                 (gUp.Equals(points[index + 1]) && gDown.Equals(points[index - 1])) )
+            {
+                var roll = rand.Next(2);
+
+                nx = (roll == 0 ? nx + 1 : nx - 1);
+                dirNew = (roll == 0 ? Direction.RIGHT : Direction.LEFT);
+
+                return new MazePath(nx, ny, dirNew);
+            }
+
+            // Path is horizontal
+            if ( (gLeft.Equals(points[index - 1]) && gRight.Equals(points[index + 1])) ||
+                 (gLeft.Equals(points[index + 1]) && gRight.Equals(points[index - 1])) )
+            {
+                var roll = rand.Next(2);
+
+                ny = (roll == 0 ? ny + 1 : ny - 1);
+                dirNew = (roll == 0 ? Direction.DOWN : Direction.UP);
+
+                return new MazePath(nx, ny, dirNew);
+            }
+
+            // Corner, upper right
+            if ( (gUp.Equals(points[index - 1]) && gRight.Equals(points[index + 1])) ||
+                 (gUp.Equals(points[index + 1]) && gRight.Equals(points[index - 1])) )
+            {
+                var roll = rand.Next(2);
+
+                nx = (roll == 0 ? nx - 1 : nx);
+                ny = (roll == 0 ? ny : ny + 1);
+                dirNew = (roll == 0 ? Direction.LEFT : Direction.DOWN);
+
+                return new MazePath(nx, ny, dirNew);
+            }
+
+            // Corner, upper left
+            if ( (gUp.Equals(points[index - 1]) && gLeft.Equals(points[index + 1])) ||
+                 (gUp.Equals(points[index + 1]) && gLeft.Equals(points[index - 1])) )
+            {
+                var roll = rand.Next(2);
+
+                nx = (roll == 0 ? nx + 1 : nx);
+                ny = (roll == 0 ? ny : ny + 1);
+                dirNew = (roll == 0 ? Direction.RIGHT : Direction.DOWN);
+
+                return new MazePath(nx, ny, dirNew);
+            }
+
+            // Corner, lower right
+            if ( (gDown.Equals(points[index - 1]) && gRight.Equals(points[index + 1])) ||
+                 (gDown.Equals(points[index + 1]) && gRight.Equals(points[index - 1])) )
+            {
+                var roll = rand.Next(2);
+
+                nx = (roll == 0 ? nx - 1 : nx);
+                ny = (roll == 0 ? ny : ny - 1);
+                dirNew = (roll == 0 ? Direction.LEFT : Direction.UP);
+
+                return new MazePath(nx, ny, dirNew);
+            }
+
+            // Corner, lower left
+            if ( (gDown.Equals(points[index - 1]) && gLeft.Equals(points[index + 1])) ||
+                 (gDown.Equals(points[index + 1]) && gLeft.Equals(points[index - 1])) )
+            {
+                var roll = rand.Next(2);
+
+                nx = (roll == 0 ? nx + 1 : nx);
+                ny = (roll == 0 ? ny : ny - 1);
+                dirNew = (roll == 0 ? Direction.RIGHT : Direction.UP);
+
+                return new MazePath(nx, ny, dirNew);
+            }
+
             return null;
-
-        var index = rand.Next(points.Count - 2) + 1;
-
-        var nx = points[index].x;
-        var ny = points[index].y;
-
-        return null;
-    }
-
-    public bool ChangeDirection()
-    {
-        if (GetX() % 2 == 1 || GetY() % 2 == 1)
-            return false;
-
-        var roll = rand.Next(2);
-
-        switch(direction)
-        {
-            case Direction.UP:
-            case Direction.DOWN:
-            {
-                direction = (roll == 0 ? Direction.LEFT : Direction.RIGHT);
-            } break;
-
-            case Direction.LEFT:
-            case Direction.RIGHT:
-            {
-                direction = (roll == 0 ? Direction.UP : Direction.DOWN);
-            } break;
-
-            default: {} break;
         }
 
-        return true;
-    }
+        
 
-    public GridPoint? GetBranchCheckpoint()
-    {
-        GridPoint? result = null;
-        var checkX = this.points[0].x;
-        var checkY = this.points[0].y;
-
-        switch (this.direction)
+        public bool ChangeDirection()
         {
-            case Direction.UP:
-            {
-                result = new GridPoint(checkX, checkY - 1);
-            } break;
+            if (GetX() % 2 == 1 || GetY() % 2 == 1)
+                return false;
 
-            case Direction.DOWN:
-            {
-                result = new GridPoint(checkX, checkY + 1);
-            } break;
+            var roll = rand.Next(2);
 
-            case Direction.LEFT:
+            switch(direction)
             {
-                result = new GridPoint(checkX - 1, checkY);
-            } break;
+                case Direction.UP:
+                case Direction.DOWN:
+                {
+                    direction = (roll == 0 ? Direction.LEFT : Direction.RIGHT);
+                } break;
 
-            case Direction.RIGHT:
-            {
-                result = new GridPoint(checkX + 1, checkY);
-            } break;
+                case Direction.LEFT:
+                case Direction.RIGHT:
+                {
+                    direction = (roll == 0 ? Direction.UP : Direction.DOWN);
+                } break;
 
-            default: {} break;
+                default: {} break;
+            }
+
+            return true;
         }
 
-        return result;
-    }
-
-    public GridPoint? GetCheckpoint()
-    {
-        GridPoint? result = null;
-        var checkX = points[0].x;
-        var checkY = points[0].y;
-
-        switch (direction)
+        public GridPoint? GetBranchCheckpoint()
         {
-            case Direction.UP:
-            {
-                result = new GridPoint(checkX, checkY - 2);
-            } break;
+            GridPoint? result = null;
+            var checkX = this.points[0].x;
+            var checkY = this.points[0].y;
 
-            case Direction.DOWN:
+            switch (this.direction)
             {
-                result = new GridPoint(checkX, checkY + 2);
-            } break;
+                case Direction.UP:
+                {
+                    result = new GridPoint(checkX, checkY - 1);
+                } break;
 
-            case Direction.LEFT:
-            {
-                result = new GridPoint(checkX - 2, checkY);
-            } break;
+                case Direction.DOWN:
+                {
+                    result = new GridPoint(checkX, checkY + 1);
+                } break;
 
-            case Direction.RIGHT:
-            {
-                result = new GridPoint(checkX + 2, checkY);
-            } break;
+                case Direction.LEFT:
+                {
+                    result = new GridPoint(checkX - 1, checkY);
+                } break;
 
-            default: {} break;
+                case Direction.RIGHT:
+                {
+                    result = new GridPoint(checkX + 1, checkY);
+                } break;
+
+                default: {} break;
+            }
+
+            return result;
         }
 
-        return result;
-    }
-
-    public int GetX()
-    {
-        return points[points.Count - 1].x;
-    }
-
-    public int GetY()
-    {
-        return points[points.Count - 1].y;
-    }
-
-    public void Grow()
-    {
-        var newX = GetX();
-        var newY = GetY();
-
-        switch (direction)
+        public GridPoint? GetCheckpoint()
         {
-            case Direction.UP:
-            {
-                --newY;
-            } break;
+            GridPoint? result = null;
+            var checkX = points[0].x;
+            var checkY = points[0].y;
 
-            case Direction.DOWN:
+            switch (direction)
             {
-                ++newY;
-            } break;
+                case Direction.UP:
+                {
+                    result = new GridPoint(checkX, checkY - 2);
+                } break;
 
-            case Direction.LEFT:
-            {
-                --newX;
-            } break;
+                case Direction.DOWN:
+                {
+                    result = new GridPoint(checkX, checkY + 2);
+                } break;
 
-            case Direction.RIGHT:
-            {
-                ++newX;
-            } break;
+                case Direction.LEFT:
+                {
+                    result = new GridPoint(checkX - 2, checkY);
+                } break;
 
-            default: return;
+                case Direction.RIGHT:
+                {
+                    result = new GridPoint(checkX + 2, checkY);
+                } break;
+
+                default: {} break;
+            }
+
+            return result;
         }
 
-        points.Add(new GridPoint(newX, newY));
+        public int GetX()
+        {
+            return points[points.Count - 1].x;
+        }
+
+        public int GetY()
+        {
+            return points[points.Count - 1].y;
+        }
+
+        public void Grow()
+        {
+            var newX = GetX();
+            var newY = GetY();
+
+            switch (direction)
+            {
+                case Direction.UP:
+                {
+                    --newY;
+                } break;
+
+                case Direction.DOWN:
+                {
+                    ++newY;
+                } break;
+
+                case Direction.LEFT:
+                {
+                    --newX;
+                } break;
+
+                case Direction.RIGHT:
+                {
+                    ++newX;
+                } break;
+
+                default: return;
+            }
+
+            points.Add(new GridPoint(newX, newY));
+        }
     }
-}
 
 }
