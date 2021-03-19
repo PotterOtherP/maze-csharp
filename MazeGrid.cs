@@ -5,31 +5,33 @@ namespace Maze
 {
     public class MazeGrid
     {
-        private static readonly int COMPLEXITY_DEFAULT = 5;
-        private static readonly int COMPLEXITY_MIN = 3;
-        private static readonly int COMPLEXITY_MAX = 61;
-        private static readonly int MAX_ITERATIONS = 50000;
-        private readonly int BRANCH_PERCENT = 10;
-        private readonly char CH_WALL = 'X';
-        private readonly char CH_SPACE = '-';
+        public static readonly int COMPLEXITY_DEFAULT = 5;
+        public static readonly int COMPLEXITY_MIN = 3;
+        public static readonly int COMPLEXITY_MAX = 61;
+        public static readonly int MAX_ITERATIONS = 50000;
+        public readonly int BRANCH_PERCENT = 10;
+        public readonly char CH_WALL = 'X';
+        public readonly char CH_SPACE = '-';
 
-        private int complexity;
-        private List<MazePath> paths;
-        private List<MazePath> branches;
-        private int rows;
-        private int columns;
-        private int wall_left = 0;
-        private int wall_right = 0;
-        private int wall_top;
-        private int wall_bottom;
-        private int while_control = 0;
-        private GridPoint startPoint;
-        private GridPoint exitPoint;
-        private int startX;
-        private int startY;
-        private int exitX;
-        private int exitY;
+        public int complexity;
+        public List<MazePath> paths;
+        public List<MazePath> branches;
+        public int rows;
+        public int columns;
+        public int wall_left = 0;
+        public int wall_right = 0;
+        public int wall_top;
+        public int wall_bottom;
+        public int while_control = 0;
+        public GridPoint startPoint;
+        public GridPoint exitPoint;
+        public int startX;
+        public int startY;
+        public int exitX;
+        public int exitY;
+        public Random rand;
 
+        public char[,] grid { get; }
         public ColorRGB wallColor { get; set; }
         public ColorRGB spaceColor { get; set; }
 
@@ -38,20 +40,348 @@ namespace Maze
             this.complexity = complexity;
             this.wallColor = wallColor;
             this.spaceColor = spaceColor;
+            this.rand = new Random();
 
             rows = complexity * 3;
             columns = (complexity * 4) + 1;
             wall_right = columns - 1;
             wall_bottom = rows - 1;
+
+            grid = new char[rows, columns];
         }
 
         public MazeGrid(int complexity) : this(complexity, new ColorRGB(100, 100, 100), new ColorRGB(200, 200, 200))
         {
+            RandomizeColors();
         }
 
         public MazeGrid() : this(COMPLEXITY_DEFAULT, new ColorRGB(100, 100, 100), new ColorRGB(200, 200, 200))
         {
+            RandomizeColors();
         }
 
+        public void AddPath(int x, int y, Direction d)
+        {
+            if (grid[y,x] == CH_SPACE)
+            {
+                paths.Add(new MazePath(x, y, d));
+                grid[y,x] = CH_WALL;
+            }
+        }
+
+        public void AddTopWallPaths()
+        {
+            int pathY = wall_top + 1;
+            int pathX = rand.Next(2) * 2 + 2;
+
+            if (Math.Abs(startX - pathX) > 3)
+            {
+                AddPath(pathX, pathY, Direction.DOWN);
+            }
+
+            for (var i = pathX; i <= wall_right - 2; i += 4)
+            {
+                int roll = rand.Next(2);
+
+                if (roll == 1 && Math.Abs(startX - i) > 3)
+                {
+                    AddPath(i, pathY, Direction.DOWN);
+                }
+            }
+        }
+
+        public void AddBottomWallPaths()
+        {
+            int pathY = wall_bottom - 1;
+            int pathX = rand.Next(2) * 2 + 2;
+
+            if (Math.Abs(exitX - pathX) > 3)
+            {
+                AddPath(pathX, pathY, Direction.UP);
+            }
+
+            for (var i = pathX; i <= wall_right - 2; i += 4)
+            {
+                int roll = rand.Next(2);
+
+                if (roll == 1 && Math.Abs(exitX - i) > 3)
+                {
+                    AddPath(i, pathY, Direction.UP);
+                }
+            }
+        }
+
+        public void AddLeftWallPaths()
+        {
+            int pathX = wall_left + 1;
+            int pathY = rand.Next(2) * 2 + 4;
+
+            AddPath(pathX, pathY, Direction.RIGHT);
+
+            for (var i = pathY; i <= wall_bottom - 3; i += 4)
+            {
+                int roll = rand.Next(2);
+
+                if (roll == 1)
+                {
+                    AddPath(pathX, i, Direction.RIGHT);
+                }
+            }
+
+        }
+
+        public void AddRightWallPaths()
+        {
+            int pathX = this.wall_right - 1;
+            int pathY = rand.Next(2) * 2 + 4;
+
+            AddPath(pathX, pathY, Direction.LEFT);
+
+            for (var i = pathY; i <= this.wall_bottom - 3; i += 4)
+            {
+                int roll = rand.Next(2);
+
+                if (roll == 1)
+                {
+                    AddPath(pathX, i, Direction.LEFT);
+                }
+            }
+
+        }
+
+        public void GrowPaths()
+        {
+            foreach(MazePath path in paths)
+            {
+                if (!path.active)
+                    continue;
+                
+                if (!PathIsClear(path.GetCheckpoint(path.direction), path.direction))
+                {
+                    if (!path.ChangeDirection())
+                    {
+                        path.active = false;
+                        continue;
+                    }
+                }
+
+                else if (rand.Next(100) < 60)
+                {
+                    path.Grow();
+                }
+
+                else
+                {
+                    path.ChangeDirection();
+                }
+
+                path.active = false;
+
+                Direction[] dirs = {Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT};
+
+                foreach (Direction d in dirs)
+                {
+                    if (PathIsClear(path.GetCheckpoint(d), d))
+                        path.active = true;
+                }
+
+                foreach (GridPoint pt in path.points)
+                {
+                    grid[pt.y, pt.x] = CH_WALL;
+                }
+            }
+        }
+
+        public void InitMaze()
+        {
+            for (var i = 0; i < this.rows; ++i)
+            {
+                for (var j = 0; j < this.columns; ++j)
+                {
+                    if (i == this.wall_top || i == this.wall_bottom ||
+                        j == this.wall_left || j == this.wall_right)
+                        grid[i, j] = CH_WALL;
+                    else
+                        grid[i, j] = CH_SPACE;
+                }
+            }
+
+
+
+            startX = rand.Next((columns - 6) / 2) * 2 + 3;
+            exitX = rand.Next((columns - 6) / 2) * 2 + 3;
+
+            if (startX > this.columns / 2)
+                startX = startX - (int)Math.Floor(this.columns / 2.0);
+
+            if (exitX < this.columns / 2)
+                exitX = exitX + (int)Math.Floor(this.columns / 2.0);
+
+            grid[wall_top, startX] = CH_SPACE;
+            grid[wall_bottom, exitX] = CH_SPACE;
+
+            startPoint = new GridPoint(startX, wall_top);
+            exitPoint = new GridPoint(exitX, wall_bottom);
+
+            AddPath(startPoint.x - 1, startPoint.y + 1, Direction.DOWN);
+            AddPath(startPoint.x + 1, startPoint.y + 1, Direction.DOWN);
+            AddPath(exitPoint.x - 1, exitPoint.y - 1, Direction.UP);
+            AddPath(exitPoint.x + 1, exitPoint.y - 1, Direction.UP);
+
+            startX = startPoint.x;
+            startY = startPoint.y;
+            exitX = exitPoint.x;
+            exitY = exitPoint.y;
+        }
+
+
+        public bool IsComplete()
+        {
+            bool result = true;
+
+            // Horizontal set of 2 x 3 points
+            for (var i = 1; i < this.rows - 2; ++i)
+            {
+                for (var j = 1; j < this.columns - 2; ++j)
+                {
+                    if (grid[i, j] == CH_SPACE &&
+                        grid[i, j + 1] == CH_SPACE &&
+                        grid[i, j - 1] == CH_SPACE &&
+                        grid[i + 1, j] == CH_SPACE &&
+                        grid[i + 1, j + 1] == CH_SPACE &&
+                        grid[i + 1, j - 1] == CH_SPACE)
+                    {
+                        result = false;
+                    }
+                }
+            }
+
+            // Vertical set of 2 x 3 points
+            for (var i = 1; i < this.rows - 2; ++i)
+            {
+                for (var j = 1; j < this.columns - 2; ++j)
+                {
+                    if (grid[i, j] == CH_SPACE &&
+                        grid[i, j + 1] == CH_SPACE &&
+                        grid[i - 1, j] == CH_SPACE &&
+                        grid[i - 1, j + 1] == CH_SPACE &&
+                        grid[i + 1, j] == CH_SPACE &&
+                        grid[i + 1, j + 1] == CH_SPACE)
+                    {
+                        result = false;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public bool PathIsClear(GridPoint pt, Direction dir)
+        {
+            int checkX = Math.Max(this.wall_left, pt.x);
+            int checkY = Math.Max(this.wall_top, pt.y);
+
+            checkX = Math.Min(this.wall_right, checkX);
+            checkY = Math.Min(this.wall_bottom, checkY);
+
+            if (grid[checkY, checkX] == CH_WALL)
+                return false;
+
+            switch (dir)
+            {
+                case Direction.UP:
+                {
+                    if (grid[checkY, checkX + 1] == CH_WALL     ||
+                        grid[checkY, checkX - 1] == CH_WALL     ||
+                        grid[checkY + 1, checkX + 1] == CH_WALL ||
+                        grid[checkY + 1, checkX] == CH_WALL     ||
+                        grid[checkY + 1, checkX - 1] == CH_WALL)
+                    {
+                        return false;
+                    }
+
+                } break;
+                
+                case Direction.DOWN:
+                {
+                    if (grid[checkY, checkX + 1] == CH_WALL     ||
+                        grid[checkY, checkX - 1] == CH_WALL     ||
+                        grid[checkY - 1, checkX + 1] == CH_WALL ||
+                        grid[checkY - 1, checkX] == CH_WALL     ||
+                        grid[checkY - 1, checkX - 1] == CH_WALL)
+                    {
+                        return false;
+                    }
+
+                } break;
+
+                case Direction.LEFT:
+                {
+                    if (grid[checkY + 1, checkX] == CH_WALL     ||
+                        grid[checkY - 1, checkX] == CH_WALL     ||
+                        grid[checkY + 1, checkX + 1] == CH_WALL ||
+                        grid[checkY, checkX + 1] == CH_WALL     ||
+                        grid[checkY - 1, checkX + 1] == CH_WALL)
+                    {   
+                        return false;
+                    }
+
+                } break;
+
+                case Direction.RIGHT:
+                {
+                    if (grid[checkY + 1, checkX] == CH_WALL     ||
+                        grid[checkY - 1, checkX] == CH_WALL     ||
+                        grid[checkY + 1, checkX - 1] == CH_WALL ||
+                        grid[checkY, checkX - 1] == CH_WALL     ||
+                        grid[checkY - 1, checkX - 1] == CH_WALL)
+                    {   
+                        return false;
+                    }
+
+                } break;
+
+                default: {} break;
+            }
+                
+            return true;
+        }
+
+        public bool PathsActive()
+        {
+            foreach (MazePath path in paths)
+            {
+                if (path.active)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public void PrintMazeToConsole()
+        {
+            for (var i = 0; i < rows; ++i)
+            {
+                for (var j = 0; j < columns; ++j)
+                {
+                    Console.Write(grid[i, j]);
+                }
+                Console.WriteLine();
+            }
+        }
+
+        public void RandomizeColors()
+        {
+            byte spaceRed = (byte)(rand.Next(40) + 190);
+            byte spaceGreen = (byte)(rand.Next(40) + 190);
+            byte spaceBlue = (byte)(rand.Next(40) + 190);
+
+            byte wallRed = (byte)(255 - spaceRed);
+            byte wallGreen = (byte)(255 - spaceGreen);
+            byte wallBlue = (byte)(255 - spaceBlue);
+
+            wallColor = new ColorRGB(wallRed, wallGreen, wallBlue);
+            spaceColor = new ColorRGB(spaceRed, spaceGreen, spaceBlue);
+        }
     }
 }

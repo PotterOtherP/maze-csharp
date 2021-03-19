@@ -148,13 +148,13 @@ namespace Maze
             return true;
         }
 
-        public GridPoint? GetBranchCheckpoint()
+        public GridPoint GetBranchCheckpoint()
         {
-            GridPoint? result = null;
-            var checkX = this.points[0].x;
-            var checkY = this.points[0].y;
+            GridPoint result;
+            var checkX = points[0].x;
+            var checkY = points[0].y;
 
-            switch (this.direction)
+            switch (direction)
             {
                 case Direction.UP:
                 {
@@ -176,19 +176,19 @@ namespace Maze
                     result = new GridPoint(checkX + 1, checkY);
                 } break;
 
-                default: {} break;
+                default: { result = new GridPoint(0, 0); } break;
             }
 
             return result;
         }
 
-        public GridPoint? GetCheckpoint()
+        public GridPoint GetCheckpoint(Direction dir)
         {
-            GridPoint? result = null;
+            GridPoint result;
             var checkX = points[0].x;
             var checkY = points[0].y;
 
-            switch (direction)
+            switch (dir)
             {
                 case Direction.UP:
                 {
@@ -210,7 +210,7 @@ namespace Maze
                     result = new GridPoint(checkX + 2, checkY);
                 } break;
 
-                default: {} break;
+                default: { result = new GridPoint(0, 0); } break;
             }
 
             return result;

@@ -29,10 +29,10 @@ namespace Maze
         }
     }
 
-    public struct GridPoint
+    public readonly struct GridPoint
     {
-        public int x { get; }
-        public int y { get; }
+        public readonly int x;
+        public readonly int y;
 
         public GridPoint(int x, int y)
         {
@@ -68,7 +68,11 @@ namespace Maze
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            MazeGrid newMaze = new MazeGrid(5);
+
+            newMaze.InitMaze();
+
+            newMaze.PrintMazeToConsole();
         }
     }
 }
