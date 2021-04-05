@@ -68,10 +68,12 @@ namespace Maze
     {
         static void Main(string[] args)
         {
-            MazeGrid newMaze = new MazeGrid(5);
+            int complexity = 10;
+
+            MazeGrid newMaze = new MazeGrid(complexity);
 
             newMaze.InitMaze();
-
+            newMaze.GenerateMaze();
             newMaze.PrintMazeToConsole();
         }
     }

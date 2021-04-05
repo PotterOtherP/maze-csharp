@@ -42,12 +42,17 @@ namespace Maze
             this.spaceColor = spaceColor;
             this.rand = new Random();
 
+            // The number of rows and columns should both always be odd. If complexity is an even number, add one row.
             rows = complexity * 3;
+            if (complexity % 2 == 0)
+                ++rows;
             columns = (complexity * 4) + 1;
             wall_right = columns - 1;
             wall_bottom = rows - 1;
 
             grid = new char[rows, columns];
+            paths = new List<MazePath>();
+            branches = new List<MazePath>();
         }
 
         public MazeGrid(int complexity) : this(complexity, new ColorRGB(100, 100, 100), new ColorRGB(200, 200, 200))
@@ -149,12 +154,73 @@ namespace Maze
 
         }
 
+        public void GenerateMaze()
+        {
+            AddTopWallPaths();
+            AddBottomWallPaths();
+            AddLeftWallPaths();
+            AddRightWallPaths();
+
+            while (PathsActive())
+            {
+                if (while_control > MAX_ITERATIONS)
+                {
+                    Console.WriteLine("Maximum iterations reached: wall paths");
+                    break;
+                }
+
+                ++while_control;
+
+                GrowPaths();
+            }
+
+            while_control = 0;
+            while (!IsComplete())
+            {
+                if (while_control > MAX_ITERATIONS)
+                {
+                    Console.WriteLine("Maximum iterations reached: branches");
+                    break;
+                }
+
+                ++while_control;
+
+                foreach (MazePath path in paths)
+                {
+                    if (path.points.Count <= 2)
+                        continue;
+                    
+                    MazePath p = path.Branch();
+                    if (PathIsClear(p.GetBranchCheckpoint(), p.direction))
+                        branches.Add(p);
+                }
+
+                foreach(MazePath branch in branches)
+                {
+                    paths.Add(branch);
+                }
+
+                branches.Clear();
+
+                while (PathsActive())
+                {
+                    if (while_control > MAX_ITERATIONS)
+                        break;
+
+                    ++while_control;
+                    GrowPaths();
+                }
+            }
+        }
+
         public void GrowPaths()
         {
             foreach(MazePath path in paths)
             {
                 if (!path.active)
+                {
                     continue;
+                }
                 
                 if (!PathIsClear(path.GetCheckpoint(path.direction), path.direction))
                 {
@@ -278,11 +344,11 @@ namespace Maze
 
         public bool PathIsClear(GridPoint pt, Direction dir)
         {
-            int checkX = Math.Max(this.wall_left, pt.x);
-            int checkY = Math.Max(this.wall_top, pt.y);
+            int checkX = Math.Max(wall_left, pt.x);
+            int checkY = Math.Max(wall_top, pt.y);
 
-            checkX = Math.Min(this.wall_right, checkX);
-            checkY = Math.Min(this.wall_bottom, checkY);
+            checkX = Math.Min(wall_right, checkX);
+            checkY = Math.Min(wall_bottom, checkY);
 
             if (grid[checkY, checkX] == CH_WALL)
                 return false;
@@ -365,6 +431,7 @@ namespace Maze
                 for (var j = 0; j < columns; ++j)
                 {
                     Console.Write(grid[i, j]);
+                    Console.Write(" ");
                 }
                 Console.WriteLine();
             }

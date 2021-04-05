@@ -12,9 +12,12 @@ namespace Maze
 
         public MazePath(int startX, int startY, Direction dir)
         {
-            points.Add(new GridPoint(startX, startY));
             direction = dir;
+            active = true;
+            points = new List<GridPoint>();
             rand = new Random();
+
+            points.Add(new GridPoint(startX, startY));
         }
 
         public MazePath Branch()
@@ -185,8 +188,8 @@ namespace Maze
         public GridPoint GetCheckpoint(Direction dir)
         {
             GridPoint result;
-            var checkX = points[0].x;
-            var checkY = points[0].y;
+            var checkX = GetX();
+            var checkY = GetY();
 
             switch (dir)
             {
